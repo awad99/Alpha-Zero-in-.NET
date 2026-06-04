@@ -9,3 +9,15 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.pdb
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.exe.config
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.Form1.resources
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bB.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bK.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bN.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bP.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bQ.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bR.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wB.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wK.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wN.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wP.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wQ.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wR.png

@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -6,14 +8,27 @@ namespace AlphaZero
 {
     public partial class Form1 : Form
     {
-        // 2D Array of Button controls representing the board squares
         private Button[,] gridButtons = new Button[8, 8];
 
-        // Custom Premium Colors
-        private readonly Color colorLightSquare = Color.FromArgb(240, 240, 240); // Soft Light Cream
-        private readonly Color colorDarkSquare = Color.FromArgb(48, 53, 66);     // Sleek Dark Gray-Blue
-        private readonly Color colorHoverLight = Color.FromArgb(220, 220, 220);  // Hover color for light squares
-        private readonly Color colorHoverDark = Color.FromArgb(64, 71, 88);      // Hover color for dark squares
+        private readonly Color colorLightSquare = Color.FromArgb(240, 240, 240); 
+        private readonly Color colorDarkSquare = Color.FromArgb(48, 53, 66);     
+        private readonly Color colorHoverLight = Color.FromArgb(220, 220, 220); 
+        private readonly Color colorHoverDark = Color.FromArgb(64, 71, 88);      
+
+        private Dictionary<string, Image> pieceImages = new Dictionary<string, Image>();
+        private Tuple<int, int> selectedSquare = null;
+
+        private string[,] boardState = new string[8, 8]
+        {
+            { "bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR" },
+            { "bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP" },
+            { null, null, null, null, null, null, null, null },
+            { null, null, null, null, null, null, null, null },
+            { null, null, null, null, null, null, null, null },
+            { null, null, null, null, null, null, null, null },
+            { "wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP" },
+            { "wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR" }
+        };
 
         public Form1()
         {
@@ -22,8 +37,35 @@ namespace AlphaZero
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            LoadPieceImages();
             SetupFormLayout();
             CreateFullScreenChessboard();
+        }
+
+        private void LoadPieceImages()
+        {
+            string assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
+            string[] pieceNames = { "wP", "wR", "wN", "wB", "wQ", "wK", "bP", "bR", "bN", "bB", "bQ", "bK" };
+            
+            foreach (var piece in pieceNames)
+            {
+                string filePath = Path.Combine(assetsPath, $"{piece}.png");
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        pieceImages[piece] = Image.FromFile(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error loading {piece} image: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Missing chess piece image: {filePath}");
+                }
+            }
         }
 
         private void SetupFormLayout()
@@ -81,6 +123,14 @@ namespace AlphaZero
                     btn.FlatAppearance.MouseOverBackColor = hoverColor;
                     btn.FlatAppearance.MouseDownBackColor = hoverColor;
 
+                    // Set piece image if present
+                    string piece = boardState[row, col];
+                    if (piece != null && pieceImages.ContainsKey(piece))
+                    {
+                        btn.BackgroundImage = pieceImages[piece];
+                        btn.BackgroundImageLayout = ImageLayout.Zoom;
+                    }
+
                     btn.Click += Square_Click;
 
                     boardTable.Controls.Add(btn, col, row);
@@ -95,15 +145,108 @@ namespace AlphaZero
         {
             Button clickedButton = (Button)sender;
             Tuple<int, int> position = (Tuple<int, int>)clickedButton.Tag;
-            int row = position.Item1;
-            int col = position.Item2;
+            int r = position.Item1;
+            int c = position.Item2;
 
-            char file = (char)('a' + col);
-            int rank = 8 - row;
+            char file = (char)('a' + c);
+            int rank = 8 - r;
 
-            // Display clicked square coordinate on standard output or ToolTip
-            ToolTip toolTip = new ToolTip();
-            toolTip.Show($"Square: {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+            if (selectedSquare == null)
+            {
+                // Select a piece
+                if (boardState[r, c] != null)
+                {
+                    selectedSquare = position;
+                    clickedButton.BackColor = Color.FromArgb(173, 216, 230); // Light blue highlight for selection
+                    
+                    // Show selection tooltip
+                    string pieceName = GetFullPieceName(boardState[r, c]);
+                    ToolTip toolTip = new ToolTip();
+                    toolTip.Show($"Selected {pieceName} on {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
+                }
+                else
+                {
+                    // Clicked empty square without selection
+                    ToolTip toolTip = new ToolTip();
+                    toolTip.Show($"Square: {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
+                }
+            }
+            else
+            {
+                int selRow = selectedSquare.Item1;
+                int selCol = selectedSquare.Item2;
+
+                if (selRow == r && selCol == c)
+                {
+                    // Deselect
+                    ResetSquareColors();
+                    selectedSquare = null;
+                }
+                else
+                {
+                    // Move piece
+                    string piece = boardState[selRow, selCol];
+                    boardState[selRow, selCol] = null;
+                    boardState[r, c] = piece;
+
+                    // Update UI buttons
+                    UpdateSquareUI(selRow, selCol);
+                    UpdateSquareUI(r, c);
+
+                    ResetSquareColors();
+                    selectedSquare = null;
+
+                    // Tooltip for movement confirmation
+                    string pieceName = GetFullPieceName(piece);
+                    ToolTip toolTip = new ToolTip();
+                    toolTip.Show($"Moved {pieceName} to {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+                }
+            }
+        }
+
+        private void UpdateSquareUI(int r, int c)
+        {
+            Button btn = gridButtons[r, c];
+            string piece = boardState[r, c];
+            if (piece != null && pieceImages.ContainsKey(piece))
+            {
+                btn.BackgroundImage = pieceImages[piece];
+                btn.BackgroundImageLayout = ImageLayout.Zoom;
+            }
+            else
+            {
+                btn.BackgroundImage = null;
+            }
+        }
+
+        private void ResetSquareColors()
+        {
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    bool isLight = (r + c) % 2 == 0;
+                    gridButtons[r, c].BackColor = isLight ? colorLightSquare : colorDarkSquare;
+                }
+            }
+        }
+
+        private string GetFullPieceName(string code)
+        {
+            if (string.IsNullOrEmpty(code) || code.Length < 2) return "Unknown";
+            string color = code.StartsWith("w") ? "White" : "Black";
+            string type = "";
+            switch (code[1])
+            {
+                case 'P': type = "Pawn"; break;
+                case 'R': type = "Rook"; break;
+                case 'N': type = "Knight"; break;
+                case 'B': type = "Bishop"; break;
+                case 'Q': type = "Queen"; break;
+                case 'K': type = "King"; break;
+                default: type = "Piece"; break;
+            }
+            return $"{color} {type}";
         }
     }
 }
