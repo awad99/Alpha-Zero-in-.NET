@@ -17,18 +17,10 @@ namespace AlphaZero
 
         private Dictionary<string, Image> pieceImages = new Dictionary<string, Image>();
         private Tuple<int, int> selectedSquare = null;
+        private List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
+        private readonly Color colorValidMove = Color.FromArgb(144, 238, 144); // LightGreen
 
-        private string[,] boardState = new string[8, 8]
-        {
-            { "bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR" },
-            { "bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP" },
-            { null, null, null, null, null, null, null, null },
-            { null, null, null, null, null, null, null, null },
-            { null, null, null, null, null, null, null, null },
-            { null, null, null, null, null, null, null, null },
-            { "wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP" },
-            { "wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR" }
-        };
+        private GameLogic gameLogic = new GameLogic();
 
         public Form1()
         {
@@ -124,7 +116,7 @@ namespace AlphaZero
                     btn.FlatAppearance.MouseDownBackColor = hoverColor;
 
                     // Set piece image if present
-                    string piece = boardState[row, col];
+                    string piece = gameLogic.GetPieceAt(row, col);
                     if (piece != null && pieceImages.ContainsKey(piece))
                     {
                         btn.BackgroundImage = pieceImages[piece];
@@ -154,13 +146,17 @@ namespace AlphaZero
             if (selectedSquare == null)
             {
                 // Select a piece
-                if (boardState[r, c] != null)
+                string pieceAtSquare = gameLogic.GetPieceAt(r, c);
+                if (pieceAtSquare != null)
                 {
                     selectedSquare = position;
                     clickedButton.BackColor = Color.FromArgb(173, 216, 230); // Light blue highlight for selection
                     
+                    validMoves = gameLogic.GetValidMoves(r, c, pieceAtSquare);
+                    HighlightValidMoves();
+
                     // Show selection tooltip
-                    string pieceName = GetFullPieceName(boardState[r, c]);
+                    string pieceName = gameLogic.GetFullPieceName(pieceAtSquare);
                     ToolTip toolTip = new ToolTip();
                     toolTip.Show($"Selected {pieceName} on {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
                 }
@@ -181,33 +177,64 @@ namespace AlphaZero
                     // Deselect
                     ResetSquareColors();
                     selectedSquare = null;
+                    validMoves.Clear();
                 }
                 else
                 {
-                    // Move piece
-                    string piece = boardState[selRow, selCol];
-                    boardState[selRow, selCol] = null;
-                    boardState[r, c] = piece;
+                    bool isValidMove = false;
+                    foreach (var move in validMoves)
+                    {
+                        if (move.Item1 == r && move.Item2 == c)
+                        {
+                            isValidMove = true;
+                            break;
+                        }
+                    }
 
-                    // Update UI buttons
-                    UpdateSquareUI(selRow, selCol);
-                    UpdateSquareUI(r, c);
+                    if (isValidMove)
+                    {
+                        // Move piece
+                        string piece = gameLogic.GetPieceAt(selRow, selCol);
+                        gameLogic.MovePiece(selRow, selCol, r, c);
 
-                    ResetSquareColors();
-                    selectedSquare = null;
+                        // Update UI buttons
+                        UpdateSquareUI(selRow, selCol);
+                        UpdateSquareUI(r, c);
 
-                    // Tooltip for movement confirmation
-                    string pieceName = GetFullPieceName(piece);
-                    ToolTip toolTip = new ToolTip();
-                    toolTip.Show($"Moved {pieceName} to {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+                        ResetSquareColors();
+                        selectedSquare = null;
+                        validMoves.Clear();
+
+                        // Tooltip for movement confirmation
+                        string pieceName = gameLogic.GetFullPieceName(piece);
+                        ToolTip toolTip = new ToolTip();
+                        toolTip.Show($"Moved {pieceName} to {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+                    }
+                    else
+                    {
+                        // Deselect if clicked on invalid square
+                        ResetSquareColors();
+                        selectedSquare = null;
+                        validMoves.Clear();
+                    }
                 }
+            }
+        }
+
+        private void HighlightValidMoves()
+        {
+            foreach (var move in validMoves)
+            {
+                int moveR = move.Item1;
+                int moveC = move.Item2;
+                gridButtons[moveR, moveC].BackColor = colorValidMove;
             }
         }
 
         private void UpdateSquareUI(int r, int c)
         {
             Button btn = gridButtons[r, c];
-            string piece = boardState[r, c];
+            string piece = gameLogic.GetPieceAt(r, c);
             if (piece != null && pieceImages.ContainsKey(piece))
             {
                 btn.BackgroundImage = pieceImages[piece];
@@ -229,24 +256,6 @@ namespace AlphaZero
                     gridButtons[r, c].BackColor = isLight ? colorLightSquare : colorDarkSquare;
                 }
             }
-        }
-
-        private string GetFullPieceName(string code)
-        {
-            if (string.IsNullOrEmpty(code) || code.Length < 2) return "Unknown";
-            string color = code.StartsWith("w") ? "White" : "Black";
-            string type = "";
-            switch (code[1])
-            {
-                case 'P': type = "Pawn"; break;
-                case 'R': type = "Rook"; break;
-                case 'N': type = "Knight"; break;
-                case 'B': type = "Bishop"; break;
-                case 'Q': type = "Queen"; break;
-                case 'K': type = "King"; break;
-                default: type = "Piece"; break;
-            }
-            return $"{color} {type}";
         }
     }
 }
