@@ -149,6 +149,14 @@ namespace AlphaZero
                 string pieceAtSquare = gameLogic.GetPieceAt(r, c);
                 if (pieceAtSquare != null)
                 {
+                    bool isWhitePiece = pieceAtSquare.StartsWith("w");
+                    if (isWhitePiece != gameLogic.IsWhiteTurn)
+                    {
+                        ToolTip tt = new ToolTip();
+                        tt.Show(gameLogic.IsWhiteTurn ? "It is White's turn!" : "It is Black's turn!", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+                        return;
+                    }
+
                     selectedSquare = position;
                     clickedButton.BackColor = Color.FromArgb(173, 216, 230); // Light blue highlight for selection
                     

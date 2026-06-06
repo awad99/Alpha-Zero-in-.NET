@@ -20,3 +20,4 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.csproj.Gene
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.csproj.CoreCompileInputs.cache
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.pdb
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe.config

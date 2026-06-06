@@ -5,6 +5,7 @@ namespace AlphaZero
 {
     public class GameLogic
     {
+        public bool IsWhiteTurn { get; private set; } = true;
         private string[,] boardState;
 
         public GameLogic()
@@ -14,6 +15,7 @@ namespace AlphaZero
 
         private void InitializeBoard()
         {
+            IsWhiteTurn = true;
             boardState = new string[8, 8]
             {
                 { "bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR" },
@@ -37,6 +39,7 @@ namespace AlphaZero
             string piece = boardState[fromRow, fromCol];
             boardState[fromRow, fromCol] = null;
             boardState[toRow, toCol] = piece;
+            IsWhiteTurn = !IsWhiteTurn;
         }
 
         public List<Tuple<int, int>> GetValidMoves(int r, int c, string piece)
@@ -78,6 +81,41 @@ namespace AlphaZero
                 if (r + 1 < 8 && c + 1 < 8 && boardState[r + 1, c + 1] != null && boardState[r + 1, c + 1].StartsWith("w"))
                 {
                     moves.Add(new Tuple<int, int>(r + 1, c + 1));
+                }
+            }
+            else if (piece.EndsWith("R") || piece.EndsWith("B") || piece.EndsWith("Q"))
+            {
+                List<int[]> dirs = new List<int[]>();
+                if (piece.EndsWith("R") || piece.EndsWith("Q"))
+                {
+                    dirs.AddRange(new int[][] { new int[] { -1, 0 }, new int[] { 1, 0 }, new int[] { 0, -1 }, new int[] { 0, 1 } });
+                }
+                if (piece.EndsWith("B") || piece.EndsWith("Q"))
+                {
+                    dirs.AddRange(new int[][] { new int[] { -1, -1 }, new int[] { -1, 1 }, new int[] { 1, -1 }, new int[] { 1, 1 } });
+                }
+
+                foreach (var d in dirs)
+                {
+                    int nr = r + d[0];
+                    int nc = c + d[1];
+                    while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8)
+                    {
+                        if (boardState[nr, nc] == null)
+                        {
+                            moves.Add(new Tuple<int, int>(nr, nc));
+                        }
+                        else
+                        {
+                            if (boardState[nr, nc][0] != piece[0])
+                            {
+                                moves.Add(new Tuple<int, int>(nr, nc));
+                            }
+                            break;
+                        }
+                        nr += d[0];
+                        nc += d[1];
+                    }
                 }
             }
             else
