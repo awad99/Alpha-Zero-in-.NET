@@ -64,6 +64,7 @@ namespace AlphaZero
                     moves.Add(new Tuple<int, int>(r - 1, c + 1));
                 }
             }
+           
             else if (piece == "bP")
             {
                 if (r + 1 < 8 && boardState[r + 1, c] == null)
@@ -83,6 +84,7 @@ namespace AlphaZero
                     moves.Add(new Tuple<int, int>(r + 1, c + 1));
                 }
             }
+          
             else if (piece.EndsWith("R") || piece.EndsWith("B") || piece.EndsWith("Q"))
             {
                 List<int[]> dirs = new List<int[]>();
@@ -118,6 +120,34 @@ namespace AlphaZero
                     }
                 }
             }
+            
+            else if (piece.EndsWith("N"))
+            {
+                int[,] knightMoves =
+                {
+                    { -2, -1 }, { -2, 1 },
+                    { -1, -2 }, { -1, 2 },
+                    { 1, -2 }, { 1, 2 },
+                    { 2, -1 }, { 2, 1 }
+                };
+
+                for (int i = 0; i < 8; i++)
+                {
+                    int nr = r + knightMoves[i, 0];
+                    int nc = c + knightMoves[i, 1];
+
+                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8)
+                    {
+                        string target = boardState[nr, nc];
+
+                        if (target == null || target[0] != piece[0])
+                        {
+                            moves.Add(new Tuple<int, int>(nr, nc));
+                        }
+                    }
+                }
+            }
+
             else
             {
                 // Allow other pieces to move anywhere except squares with same color piece
@@ -134,6 +164,7 @@ namespace AlphaZero
                     }
                 }
             }
+           
             return moves;
         }
 
