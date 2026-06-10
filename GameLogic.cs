@@ -64,14 +64,18 @@ namespace AlphaZero
             if (piece == "wK")
             {
                 whiteKingMoved = true;
+
+                // Castling white
                 if (Math.Abs(toCol - fromCol) == 2)
                 {
+                    // King side
                     if (toCol == 6)
                     {
                         boardState[7, 5] = boardState[7, 7];
                         boardState[7, 7] = null;
                     }
 
+                    // Queen side
                     else if (toCol == 2)
                     {
                         boardState[7, 3] = boardState[7, 0];
@@ -79,7 +83,29 @@ namespace AlphaZero
                     }
                 }
             }
-          
+
+            else if (piece == "bK")
+            {
+                blackKingMoved = true;
+
+                if (Math.Abs(toCol - fromCol) == 2)
+                {
+                    // King side
+                    if (toCol == 6)
+                    {
+                        boardState[0, 5] = boardState[0, 7];
+                        boardState[0, 7] = null;
+                    }
+
+                    // Queen side
+                    else if (toCol == 2)
+                    {
+                        boardState[0, 3] = boardState[0, 0];
+                        boardState[0, 0] = null;
+                    }
+                }
+            }
+
             else if (piece == "bK")
             {
                 blackKingMoved = true;
@@ -139,7 +165,7 @@ namespace AlphaZero
                 if (r - 1 >= 0 && c - 1 >= 0 && boardState[r - 1, c - 1] != null && boardState[r - 1, c - 1].StartsWith("b"))
                     pseudoMoves.Add(new Tuple<int, int>(r - 1, c - 1));
             }
-           
+
             else if (piece == "bP")
             {
                 if (r + 1 < 8 && boardState[r + 1, c] == null)
@@ -208,7 +234,7 @@ namespace AlphaZero
                     }
                 }
             }
-           
+
             else if (piece.EndsWith("K"))
             {
                 int[,] kingMoves = {
@@ -230,41 +256,74 @@ namespace AlphaZero
 
                 if (piece == "wK" && !whiteKingMoved)
                 {
-                    if (!whiteRookKingSideMoved && boardState[7, 5] == null && boardState[7, 6] == null)
+                    // King side (O-O)
+                    if (!whiteRookKingSideMoved &&
+                        boardState[7, 5] == null &&
+                        boardState[7, 6] == null)
                     {
-                        if (!IsSquareAttacked(7, 4, false) && !IsSquareAttacked(7, 5, false) && !IsSquareAttacked(7, 6, false))
-                            pseudoMoves.Add(new Tuple<int, int>(7, 6));
+                        if (!IsSquareAttacked(7, 4, false) &&
+                            !IsSquareAttacked(7, 5, false) &&
+                            !IsSquareAttacked(7, 6, false))
+                        {
+                            pseudoMoves.Add(new Tuple<int, int>(7, 6)); // O-O
+                        }
                     }
-   
-                    if (!whiteRookQueenSideMoved && boardState[7, 1] == null && boardState[7, 2] == null && boardState[7, 3] == null)
+
+                    // Queen side (O-O-O)
+                    if (!whiteRookQueenSideMoved &&
+                        boardState[7, 1] == null &&
+                        boardState[7, 2] == null &&
+                        boardState[7, 3] == null)
                     {
-                        if (!IsSquareAttacked(7, 4, false) && !IsSquareAttacked(7, 3, false) && !IsSquareAttacked(7, 2, false))
-                            pseudoMoves.Add(new Tuple<int, int>(7, 2));
+                        if (!IsSquareAttacked(7, 4, false) &&
+                            !IsSquareAttacked(7, 3, false) &&
+                            !IsSquareAttacked(7, 2, false))
+                        {
+                            pseudoMoves.Add(new Tuple<int, int>(7, 2)); // O-O-O
+                        }
                     }
                 }
+                // ===== Castling BLACK =====
                 else if (piece == "bK" && !blackKingMoved)
                 {
-                    if (!blackRookKingSideMoved && boardState[0, 5] == null && boardState[0, 6] == null)
+                    // King side
+                    if (!blackRookKingSideMoved &&
+                        boardState[0, 5] == null &&
+                        boardState[0, 6] == null)
                     {
-                        if (!IsSquareAttacked(0, 4, true) && !IsSquareAttacked(0, 5, true) && !IsSquareAttacked(0, 6, true))
+                        if (!IsSquareAttacked(0, 4, true) &&
+                            !IsSquareAttacked(0, 5, true) &&
+                            !IsSquareAttacked(0, 6, true))
+                        {
                             pseudoMoves.Add(new Tuple<int, int>(0, 6));
+                        }
                     }
-                    if (!blackRookQueenSideMoved && boardState[0, 1] == null && boardState[0, 2] == null && boardState[0, 3] == null)
+
+                    // Queen side
+                    if (!blackRookQueenSideMoved &&
+                            boardState[0, 1] == null &&
+                            boardState[0, 2] == null &&
+                            boardState[0, 3] == null)
                     {
-                        if (!IsSquareAttacked(0, 4, true) && !IsSquareAttacked(0, 3, true) && !IsSquareAttacked(0, 2, true))
+                        if (!IsSquareAttacked(0, 4, true) &&
+                                !IsSquareAttacked(0, 3, true) &&
+                                !IsSquareAttacked(0, 2, true))
+                        {
                             pseudoMoves.Add(new Tuple<int, int>(0, 2));
+                        }
                     }
                 }
             }
 
-            List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
+                List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
             foreach (var move in pseudoMoves)
             {
                 if (IsMoveLegal(r, c, move.Item1, move.Item2, piece))
                     validMoves.Add(move);
             }
             return validMoves;
-        }
+    }
+            
 
         private bool IsMoveLegal(int fromRow, int fromCol, int toRow, int toCol, string piece)
         {
