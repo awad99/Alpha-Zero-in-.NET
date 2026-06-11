@@ -147,6 +147,19 @@ namespace AlphaZero
             {
                 // Select a piece
                 string pieceAtSquare = gameLogic.GetPieceAt(r, c);
+                string movedPiece = gameLogic.GetPieceAt(r, c);
+
+                if (movedPiece == "wP" && r == 0)
+                {
+                    string choice = "Q"; // ·«Õﬁ« „‰ ‰«›–… «Œ Ì«—
+                    gameLogic.PromotePawn(r, c, "w" + choice);
+                }
+
+                if (movedPiece == "bP" && r == 7)
+                {
+                    string choice = "Q";
+                    gameLogic.PromotePawn(r, c, "b" + choice);
+                }
                 if (pieceAtSquare != null)
                 {
                     bool isWhitePiece = pieceAtSquare.StartsWith("w");
@@ -159,7 +172,7 @@ namespace AlphaZero
 
                     selectedSquare = position;
                     clickedButton.BackColor = Color.FromArgb(173, 216, 230); // Light blue highlight for selection
-                    
+
                     validMoves = gameLogic.GetValidMoves(r, c, pieceAtSquare);
                     HighlightValidMoves();
 
@@ -175,6 +188,7 @@ namespace AlphaZero
                     toolTip.Show($"Square: {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
                 }
             }
+
             else
             {
                 int selRow = selectedSquare.Item1;
@@ -205,6 +219,21 @@ namespace AlphaZero
                         string piece = gameLogic.GetPieceAt(selRow, selCol);
                         gameLogic.MovePiece(selRow, selCol, r, c);
 
+                        if (gameLogic.IsWhiteTurn)
+                        {
+                            if (gameLogic.IsKingInCheck(true))
+                            {
+                                MessageBox.Show("White King is in Check!");
+                            }
+                        }
+                        else
+                        {
+                            if (gameLogic.IsKingInCheck(false))
+                            {
+                                MessageBox.Show("Black King is in Check!");
+                            }
+                        }
+
                         // Update UI buttons
                         UpdateSquareUI(selRow, selCol);
                         UpdateSquareUI(r, c);
@@ -213,11 +242,16 @@ namespace AlphaZero
                         selectedSquare = null;
                         validMoves.Clear();
 
+
                         // Tooltip for movement confirmation
                         string pieceName = gameLogic.GetFullPieceName(piece);
                         ToolTip toolTip = new ToolTip();
                         toolTip.Show($"Moved {pieceName} to {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
+
+
+
                     }
+                  
                     else
                     {
                         // Deselect if clicked on invalid square
@@ -225,6 +259,7 @@ namespace AlphaZero
                         selectedSquare = null;
                         validMoves.Clear();
                     }
+
                 }
             }
         }

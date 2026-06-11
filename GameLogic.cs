@@ -106,24 +106,6 @@ namespace AlphaZero
                 }
             }
 
-            else if (piece == "bK")
-            {
-                blackKingMoved = true;
-                if (Math.Abs(toCol - fromCol) == 2)
-                {
-                    if (toCol == 6) 
-                    {
-                        boardState[0, 5] = boardState[0, 7];
-                        boardState[0, 7] = null;
-                    }
-                    else if (toCol == 2) 
-                    {
-                        boardState[0, 3] = boardState[0, 0];
-                        boardState[0, 0] = null;
-                    }
-                }
-            }
-          
             else if (piece == "wR")
             {
                 if (fromRow == 7 && fromCol == 0) whiteRookQueenSideMoved = true;
@@ -142,7 +124,47 @@ namespace AlphaZero
             IsWhiteTurn = !IsWhiteTurn;
         }
 
+        public bool IsKingAlive(bool whiteKing)
+        {
+            string king = whiteKing ? "wK" : "bK";
 
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    if (boardState[r, c] == king)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool IsKingInCheck(bool whiteKing)
+        {
+            int kingRow = -1;
+            int kingCol = -1;
+
+            string king = whiteKing ? "wK" : "bK";
+
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    if (boardState[r, c] == king)
+                    {
+                        kingRow = r;
+                        kingCol = c;
+                    }
+                }
+            }
+
+            return IsSquareAttacked(
+                kingRow,
+                kingCol,
+                whiteKing);
+        }
+       
         public List<Tuple<int, int>> GetValidMoves(int r, int c, string piece)
         {
             List<Tuple<int, int>> pseudoMoves = new List<Tuple<int, int>>();
