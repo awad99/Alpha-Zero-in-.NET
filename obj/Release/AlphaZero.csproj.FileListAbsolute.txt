@@ -14,10 +14,10 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Release\AlphaZero.exe.config
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Release\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Release\AlphaZero.pdb
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.csproj.AssemblyReference.cache
-C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.Form1.resources
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.Properties.Resources.resources
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.csproj.GenerateResource.cache
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.csproj.CoreCompileInputs.cache
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.pdb
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe.config
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.ChessPanel.resources

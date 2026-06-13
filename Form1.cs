@@ -1,304 +1,379 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
 using System.Windows.Forms;
 
 namespace AlphaZero
 {
+    // Double-buffered panel — eliminates flicker during animation
+    public class ChessPanel : Panel
+    {
+        public ChessPanel()
+        {
+            SetStyle(ControlStyles.OptimizedDoubleBuffer |
+                     ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.UserPaint, true);
+            UpdateStyles();
+        }
+    }
+
     public partial class Form1 : Form
     {
-        private Button[,] gridButtons = new Button[8, 8];
-
-        private readonly Color colorLightSquare = Color.FromArgb(240, 240, 240); 
-        private readonly Color colorDarkSquare = Color.FromArgb(48, 53, 66);     
-        private readonly Color colorHoverLight = Color.FromArgb(220, 220, 220); 
-        private readonly Color colorHoverDark = Color.FromArgb(64, 71, 88);      
-
-        private Dictionary<string, Image> pieceImages = new Dictionary<string, Image>();
-        private Tuple<int, int> selectedSquare = null;
-        private List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
-        private readonly Color colorValidMove = Color.FromArgb(144, 238, 144); // LightGreen
-
         private GameLogic gameLogic = new GameLogic();
+        private Dictionary<string, Image> pieceImages = new Dictionary<string, Image>();
 
-        public Form1()
-        {
-            InitializeComponent();
-        }
+        private ChessPanel boardPanel;
+
+        // Selection
+        private int selRow = -1, selCol = -1;
+        private List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
+
+        // Animation
+        private System.Windows.Forms.Timer animTimer;
+        private bool   animating;
+        private int    aFromR, aFromC, aToR, aToC;
+        private string aPiece;
+        private float  aProgress;
+        private const float STEP = 0.1f;
+
+        // Board geometry — fills the entire panel
+        private int SqW { get { return boardPanel.Width  / 8; } }
+        private int SqH { get { return boardPanel.Height / 8; } }
+
+        // Colors
+        private static readonly Color CLight = Color.FromArgb(240, 217, 181);
+        private static readonly Color CDark  = Color.FromArgb(181, 136,  99);
+
+        public Form1() { InitializeComponent(); }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            LoadPieceImages();
-            SetupFormLayout();
-            CreateFullScreenChessboard();
+            Text        = "Chess";
+            WindowState = FormWindowState.Maximized;
+            BackColor   = Color.FromArgb(30, 30, 30);
+
+            LoadImages();
+            BuildUI();
+
+            animTimer          = new System.Windows.Forms.Timer { Interval = 12 };
+            animTimer.Tick    += OnTick;
         }
 
-        private void LoadPieceImages()
+        private void LoadImages()
         {
-            string assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-            string[] pieceNames = { "wP", "wR", "wN", "wB", "wQ", "wK", "bP", "bR", "bN", "bB", "bQ", "bK" };
-            
-            foreach (var piece in pieceNames)
+            string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
+            foreach (var n in new[] { "wP","wR","wN","wB","wQ","wK","bP","bR","bN","bB","bQ","bK" })
             {
-                string filePath = Path.Combine(assetsPath, $"{piece}.png");
-                if (File.Exists(filePath))
-                {
-                    try
-                    {
-                        pieceImages[piece] = Image.FromFile(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error loading {piece} image: {ex.Message}");
-                    }
-                }
+                string p = Path.Combine(dir, n + ".png");
+                if (File.Exists(p)) try { pieceImages[n] = Image.FromFile(p); } catch { }
+            }
+        }
+
+        private void BuildUI()
+        {
+            boardPanel            = new ChessPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(30, 30, 30) };
+            boardPanel.Paint     += OnPaint;
+            boardPanel.MouseClick += OnClick;
+            boardPanel.Resize    += (s, ev) => boardPanel.Invalidate();
+
+            Controls.Add(boardPanel);
+        }
+
+        // ── Animation ─────────────────────────────────────────────────────────
+        private void OnTick(object sender, EventArgs e)
+        {
+            aProgress += STEP;
+            if (aProgress >= 1f)
+            {
+                aProgress = 1f;
+                animTimer.Stop();
+                animating = false;
+                if (gameLogic.PromotionPending)
+                    DoPromotion();
                 else
-                {
-                    Console.WriteLine($"Missing chess piece image: {filePath}");
-                }
+                    RefreshStatus();
             }
+            boardPanel.Invalidate();
         }
 
-        private void SetupFormLayout()
+        private void RefreshStatus()
         {
-            this.Text = "Chess Board";
-            this.BackColor = Color.Black;
-            
-            // Maximize the form to fill the screen
-            this.WindowState = FormWindowState.Maximized;
-            this.DoubleBuffered = true;
+            boardPanel.Invalidate();
+            CheckEnd();
         }
 
-        private void CreateFullScreenChessboard()
+        private void CheckEnd()
         {
-            // TableLayoutPanel to automatically size squares to fill the screen
-            TableLayoutPanel boardTable = new TableLayoutPanel
+            if (gameLogic.Result == GameResult.Ongoing) return;
+            string msg;
+            switch (gameLogic.Result)
             {
-                RowCount = 8,
-                ColumnCount = 8,
-                Dock = DockStyle.Fill,
-                Margin = new Padding(0),
-                BackColor = Color.Black
-            };
-
-            // Set all columns to 12.5% width
-            for (int col = 0; col < 8; col++)
-            {
-                boardTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
+                case GameResult.WhiteWins:                 msg = "Checkmate! White wins!"; break;
+                case GameResult.BlackWins:                 msg = "Checkmate! Black wins!"; break;
+                case GameResult.DrawStalemate:             msg = "Stalemate — Draw!";      break;
+                case GameResult.DrawFiftyMoveRule:         msg = "50-move rule — Draw!";   break;
+                case GameResult.DrawThreefoldRepetition:   msg = "Threefold — Draw!";      break;
+                case GameResult.DrawInsufficientMaterial:  msg = "Insufficient material — Draw!"; break;
+                default:                                   msg = "Game Over!";              break;
             }
-
-            // Set all rows to 12.5% height
-            for (int row = 0; row < 8; row++)
-            {
-                boardTable.RowStyles.Add(new RowStyle(SizeType.Percent, 12.5F));
-            }
-
-            for (int row = 0; row < 8; row++)
-            {
-                for (int col = 0; col < 8; col++)
-                {
-                    bool isLight = (row + col) % 2 == 0;
-                    Color defaultColor = isLight ? colorLightSquare : colorDarkSquare;
-                    Color hoverColor = isLight ? colorHoverLight : colorHoverDark;
-
-                    Button btn = new Button
-                    {
-                        Dock = DockStyle.Fill,
-                        Margin = new Padding(0),
-                        FlatStyle = FlatStyle.Flat,
-                        BackColor = defaultColor,
-                        Text = "", 
-                        Tag = new Tuple<int, int>(row, col)
-                    };
-                    btn.FlatAppearance.BorderSize = 0;
-                    btn.FlatAppearance.MouseOverBackColor = hoverColor;
-                    btn.FlatAppearance.MouseDownBackColor = hoverColor;
-
-                    // Set piece image if present
-                    string piece = gameLogic.GetPieceAt(row, col);
-                    if (piece != null && pieceImages.ContainsKey(piece))
-                    {
-                        btn.BackgroundImage = pieceImages[piece];
-                        btn.BackgroundImageLayout = ImageLayout.Zoom;
-                    }
-
-                    btn.Click += Square_Click;
-
-                    boardTable.Controls.Add(btn, col, row);
-                    gridButtons[row, col] = btn;
-                }
-            }
-
-            this.Controls.Add(boardTable);
+            if (MessageBox.Show(msg + "\n\nPlay again?", "Game Over",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                NewGame();
         }
 
-        private void Square_Click(object sender, EventArgs e)
+        private void DoPromotion()
         {
-            Button clickedButton = (Button)sender;
-            Tuple<int, int> position = (Tuple<int, int>)clickedButton.Tag;
-            int r = position.Item1;
-            int c = position.Item2;
-
-            char file = (char)('a' + c);
-            int rank = 8 - r;
-
-            if (selectedSquare == null)
+            string color = gameLogic.IsWhiteTurn ? "w" : "b";
+            using (var dlg = new PromotionDialog(color, pieceImages))
             {
-                // Select a piece
-                string pieceAtSquare = gameLogic.GetPieceAt(r, c);
-                string movedPiece = gameLogic.GetPieceAt(r, c);
-
-                if (movedPiece == "wP" && r == 0)
-                {
-                    string choice = "Q"; // ������ �� ����� ������
-                    gameLogic.PromotePawn(r, c, "w" + choice);
-                }
-
-                if (movedPiece == "bP" && r == 7)
-                {
-                    string choice = "Q";
-                    gameLogic.PromotePawn(r, c, "b" + choice);
-                }
-                if (pieceAtSquare != null)
-                {
-                    bool isWhitePiece = pieceAtSquare.StartsWith("w");
-                    if (isWhitePiece != gameLogic.IsWhiteTurn)
-                    {
-                        ToolTip tt = new ToolTip();
-                        tt.Show(gameLogic.IsWhiteTurn ? "It is White's turn!" : "It is Black's turn!", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
-                        return;
-                    }
-
-                    selectedSquare = position;
-                    clickedButton.BackColor = Color.FromArgb(173, 216, 230); // Light blue highlight for selection
-
-                    validMoves = gameLogic.GetValidMoves(r, c, pieceAtSquare);
-                    HighlightValidMoves();
-
-                    // Show selection tooltip
-                    string pieceName = gameLogic.GetFullPieceName(pieceAtSquare);
-                    ToolTip toolTip = new ToolTip();
-                    toolTip.Show($"Selected {pieceName} on {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
-                }
-                else
-                {
-                    // Clicked empty square without selection
-                    ToolTip toolTip = new ToolTip();
-                    toolTip.Show($"Square: {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 800);
-                }
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.ShowDialog(this);
+                gameLogic.ConfirmPromotion(dlg.Chosen ?? color + "Q");
             }
-
-            else
-            {
-                int selRow = selectedSquare.Item1;
-                int selCol = selectedSquare.Item2;
-
-                if (selRow == r && selCol == c)
-                {
-                    // Deselect
-                    ResetSquareColors();
-                    selectedSquare = null;
-                    validMoves.Clear();
-                }
-                else
-                {
-                    bool isValidMove = false;
-                    foreach (var move in validMoves)
-                    {
-                        if (move.Item1 == r && move.Item2 == c)
-                        {
-                            isValidMove = true;
-                            break;
-                        }
-                    }
-
-                    if (isValidMove)
-                    {
-                        // Move piece
-                        string piece = gameLogic.GetPieceAt(selRow, selCol);
-                        gameLogic.MovePiece(selRow, selCol, r, c);
-
-                        if (gameLogic.IsWhiteTurn)
-                        {
-                            if (gameLogic.IsKingInCheck(true))
-                            {
-                                MessageBox.Show("White King is in Check!");
-                            }
-                        }
-                        else
-                        {
-                            if (gameLogic.IsKingInCheck(false))
-                            {
-                                MessageBox.Show("Black King is in Check!");
-                            }
-                        }
-
-                        // Update UI buttons
-                        UpdateSquareUI(selRow, selCol);
-                        UpdateSquareUI(r, c);
-
-                        ResetSquareColors();
-                        selectedSquare = null;
-                        validMoves.Clear();
-
-
-                        // Tooltip for movement confirmation
-                        string pieceName = gameLogic.GetFullPieceName(piece);
-                        ToolTip toolTip = new ToolTip();
-                        toolTip.Show($"Moved {pieceName} to {file}{rank}", clickedButton, clickedButton.Width / 2, clickedButton.Height / 2, 1000);
-
-
-
-                    }
-                  
-                    else
-                    {
-                        // Deselect if clicked on invalid square
-                        ResetSquareColors();
-                        selectedSquare = null;
-                        validMoves.Clear();
-                    }
-
-                }
-            }
+            boardPanel.Invalidate();
+            RefreshStatus();
         }
 
-        private void HighlightValidMoves()
+        // ── Drawing ───────────────────────────────────────────────────────────
+        private void OnPaint(object sender, PaintEventArgs e)
         {
-            foreach (var move in validMoves)
-            {
-                int moveR = move.Item1;
-                int moveC = move.Item2;
-                gridButtons[moveR, moveC].BackColor = colorValidMove;
-            }
-        }
+            var g = e.Graphics;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.SmoothingMode     = SmoothingMode.AntiAlias;
 
-        private void UpdateSquareUI(int r, int c)
-        {
-            Button btn = gridButtons[r, c];
-            string piece = gameLogic.GetPieceAt(r, c);
-            if (piece != null && pieceImages.ContainsKey(piece))
-            {
-                btn.BackgroundImage = pieceImages[piece];
-                btn.BackgroundImageLayout = ImageLayout.Zoom;
-            }
-            else
-            {
-                btn.BackgroundImage = null;
-            }
-        }
+            int sw = SqW, sh = SqH;
+            if (sw <= 4 || sh <= 4) return;
 
-        private void ResetSquareColors()
-        {
+            bool wCheck = gameLogic.IsKingInCheck(true);
+            bool bCheck = gameLogic.IsKingInCheck(false);
+
+            // ── Squares ───────────────────────────────────────────────────────
             for (int r = 0; r < 8; r++)
             {
                 for (int c = 0; c < 8; c++)
                 {
-                    bool isLight = (r + c) % 2 == 0;
-                    gridButtons[r, c].BackColor = isLight ? colorLightSquare : colorDarkSquare;
+                    bool light = (r + c) % 2 == 0;
+                    Color col  = light ? CLight : CDark;
+
+                    // Last move
+                    if (gameLogic.LastMoveFrom != null &&
+                        ((r == gameLogic.LastMoveFrom.Item1 && c == gameLogic.LastMoveFrom.Item2) ||
+                         (r == gameLogic.LastMoveTo.Item1   && c == gameLogic.LastMoveTo.Item2)))
+                        col = Blend(col, Color.FromArgb(210, 190, 40), 0.45f);
+
+                    // Selection
+                    if (r == selRow && c == selCol)
+                        col = Blend(col, Color.FromArgb(80, 130, 230), 0.55f);
+
+                    var rect = new Rectangle(c * sw, r * sh, sw, sh);
+                    using (var b = new SolidBrush(col)) g.FillRectangle(b, rect);
+
+                    // King in check — red fill
+                    string sp = gameLogic.GetPieceAt(r, c);
+                    if ((sp == "wK" && wCheck) || (sp == "bK" && bCheck))
+                        using (var b = new SolidBrush(Color.FromArgb(120, 220, 30, 30)))
+                            g.FillRectangle(b, rect);
+
+                    // Valid-move indicators
+                    if (IsValid(r, c))
+                    {
+                        if (sp == null)
+                        {
+                            int dsw = sw / 3, dsh = sh / 3;
+                            using (var b = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
+                                g.FillEllipse(b, c*sw+(sw-dsw)/2, r*sh+(sh-dsh)/2, dsw, dsh);
+                        }
+                        else
+                        {
+                            int padw = sw / 10, padh = sh / 10;
+                            using (var p = new Pen(Color.FromArgb(130, 0, 0, 0), 4))
+                                g.DrawEllipse(p, c*sw+padw, r*sh+padh, sw-padw*2, sh-padh*2);
+                        }
+                    }
                 }
             }
+
+            // ── Coordinates ───────────────────────────────────────────────────
+            float fs = Math.Max(7f, Math.Min(sw, sh) * 0.16f);
+            using (var font = new Font("Segoe UI", fs, FontStyle.Bold))
+            {
+                for (int r = 0; r < 8; r++)
+                {
+                    bool light = (r % 2 == 0);
+                    using (var b = new SolidBrush(light ? CDark : CLight))
+                        g.DrawString((8 - r).ToString(), font, b, 2, r * sh + 2);
+                }
+                for (int c = 0; c < 8; c++)
+                {
+                    bool light = (c % 2 == 1);
+                    string lbl = ((char)('a' + c)).ToString();
+                    SizeF ts   = g.MeasureString(lbl, font);
+                    using (var b = new SolidBrush(light ? CDark : CLight))
+                        g.DrawString(lbl, font, b, c*sw+sw-ts.Width-2, 7*sh+sh-ts.Height);
+                }
+            }
+
+            // ── Pieces (skip animated piece destination) ──────────────────────
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    if (animating && r == aToR && c == aToC) continue;
+                    string p = gameLogic.GetPieceAt(r, c);
+                    if (p != null && pieceImages.ContainsKey(p))
+                    {
+                        int padw = sw / 11, padh = sh / 11;
+                        g.DrawImage(pieceImages[p], c*sw+padw, r*sh+padh, sw-padw*2, sh-padh*2);
+                    }
+                }
+            }
+
+            // ── Animated piece ────────────────────────────────────────────────
+            if (animating && aPiece != null && pieceImages.ContainsKey(aPiece))
+            {
+                float t   = 1f - (1f - aProgress) * (1f - aProgress);
+                float px  = aFromC * sw + (aToC - aFromC) * sw * t;
+                float py  = aFromR * sh + (aToR - aFromR) * sh * t;
+                int   padw = sw / 11, padh = sh / 11;
+                g.DrawImage(pieceImages[aPiece], px + padw, py + padh, sw - padw*2, sh - padh*2);
+            }
+        }
+
+        // ── Input ─────────────────────────────────────────────────────────────
+        private void OnClick(object sender, MouseEventArgs e)
+        {
+            if (animating || gameLogic.Result != GameResult.Ongoing) return;
+            int c = e.X / SqW;
+            int r = e.Y / SqH;
+            if (r < 0 || r > 7 || c < 0 || c > 7) return;
+            HandleClick(r, c);
+        }
+
+        private void HandleClick(int r, int c)
+        {
+            string piece = gameLogic.GetPieceAt(r, c);
+            bool own = piece != null && (gameLogic.IsWhiteTurn ? piece[0] == 'w' : piece[0] == 'b');
+
+            if (selRow < 0)
+            {
+                if (own) Select(r, c);
+            }
+            else if (r == selRow && c == selCol)
+            {
+                Deselect();
+            }
+            else if (own)
+            {
+                Select(r, c);
+            }
+            else if (IsValid(r, c))
+            {
+                Move(selRow, selCol, r, c);
+            }
+            else
+            {
+                Deselect();
+            }
+        }
+
+        private void Select(int r, int c)
+        {
+            selRow = r; selCol = c;
+            validMoves = gameLogic.GetValidMoves(r, c, gameLogic.GetPieceAt(r, c));
+            boardPanel.Invalidate();
+        }
+
+        private void Deselect()
+        {
+            selRow = selCol = -1;
+            validMoves.Clear();
+            boardPanel.Invalidate();
+        }
+
+        private bool IsValid(int r, int c)
+        {
+            foreach (var m in validMoves)
+                if (m.Item1 == r && m.Item2 == c) return true;
+            return false;
+        }
+
+        private void Move(int fr, int fc, int tr, int tc)
+        {
+            aPiece = gameLogic.GetPieceAt(fr, fc);
+            aFromR = fr; aFromC = fc; aToR = tr; aToC = tc;
+            aProgress = 0f; animating = true;
+
+            gameLogic.MovePiece(fr, fc, tr, tc);
+            Deselect();
+            animTimer.Start();
+        }
+
+        private void NewGame()
+        {
+            animTimer.Stop(); animating = false;
+            gameLogic.ResetGame();
+            Deselect();
+            boardPanel.Invalidate();
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        private static Color Blend(Color a, Color b, float t)
+        {
+            return Color.FromArgb(
+                Clamp((int)(a.R + (b.R - a.R) * t)),
+                Clamp((int)(a.G + (b.G - a.G) * t)),
+                Clamp((int)(a.B + (b.B - a.B) * t)));
+        }
+        private static int Clamp(int v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+    }
+
+    // ── Promotion dialog ──────────────────────────────────────────────────────
+    public class PromotionDialog : Form
+    {
+        public string Chosen { get; private set; }
+
+        public PromotionDialog(string color, Dictionary<string, Image> images)
+        {
+            Text            = "Promote Pawn";
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox     = false; MinimizeBox = false;
+            StartPosition   = FormStartPosition.CenterParent;
+            BackColor       = Color.FromArgb(36, 36, 48);
+            Size            = new Size(360, 130);
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill, Padding = new Padding(8),
+                BackColor = Color.FromArgb(36, 36, 48), FlowDirection = FlowDirection.LeftToRight
+            };
+
+            foreach (var type in new[] { "Q", "R", "B", "N" })
+            {
+                string code = color + type;
+                var btn = new Button
+                {
+                    Size = new Size(78, 78), FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(55, 55, 75), Cursor = Cursors.Hand, Tag = code
+                };
+                btn.FlatAppearance.BorderSize = 1;
+                btn.FlatAppearance.BorderColor = Color.FromArgb(90, 90, 120);
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(80, 80, 110);
+                if (images.ContainsKey(code))
+                {
+                    btn.BackgroundImage = images[code];
+                    btn.BackgroundImageLayout = ImageLayout.Zoom;
+                }
+                btn.Click += (s, ev) =>
+                {
+                    Chosen = (string)((Button)s).Tag;
+                    DialogResult = DialogResult.OK;
+                    Close();
+                };
+                flow.Controls.Add(btn);
+            }
+            Controls.Add(flow);
         }
     }
 }
