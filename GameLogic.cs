@@ -15,7 +15,8 @@ namespace AlphaZero
         DrawThreefoldRepetition
     }
 
-    public class GameLogic
+
+    public partial class GameLogic
     {
         public bool IsWhiteTurn { get; private set; } = true;
         private string[,] boardState;
@@ -376,8 +377,7 @@ namespace AlphaZero
                     }
                 }
 
-                // Castling – White
-                // isWhiteTurn=true → opp='b' → checks black attacks (correct for white king safety)
+
                 if (piece == "wK" && !whiteKingMoved && !IsKingInCheck(true))
                 {
                     if (!whiteRookKingSideMoved
@@ -390,8 +390,7 @@ namespace AlphaZero
                         && !IsSquareAttacked(7,3,true) && !IsSquareAttacked(7,2,true))
                         pseudo.Add(Sq(7, 2));
                 }
-                // Castling – Black
-                // isWhiteTurn=false → opp='w' → checks white attacks (correct for black king safety)
+
                 else if (piece == "bK" && !blackKingMoved && !IsKingInCheck(false))
                 {
                     if (!blackRookKingSideMoved
@@ -406,7 +405,7 @@ namespace AlphaZero
                 }
             }
 
-            // Filter pseudo-legal → legal
+
             var legal = new List<Tuple<int, int>>();
             foreach (var mv in pseudo)
                 if (IsMoveLegal(r, c, mv.Item1, mv.Item2, piece))
@@ -421,7 +420,7 @@ namespace AlphaZero
         {
             var tmp = (string[,])boardState.Clone();
 
-            // En-passant capture removal
+
             if (piece[1] == 'P' && tc == enPassantCol && tr == enPassantRow)
             {
                 int cap = piece[0] == 'w' ? tr + 1 : tr - 1;
@@ -457,9 +456,7 @@ namespace AlphaZero
             return false;
         }
 
-        // Returns true if the piece at (fr,fc) attacks the square (tr,tc).
-        // Pawns: diagonal attack only (independent of occupancy).
-        // Sliders: fixed direction check + clear path.
+
         private bool CanPieceAttack(int fr, int fc, int tr, int tc, string piece, string[,] board)
         {
             if (piece[1] == 'P')

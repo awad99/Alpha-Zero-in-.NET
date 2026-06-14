@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace AlphaZero
@@ -26,6 +27,10 @@ namespace AlphaZero
 
         private ChessPanel boardPanel;
 
+        // Bot
+        private BotDifficulty botDifficulty = BotDifficulty.Medium;
+        private bool          botThinking   = false;
+
         // Selection
         private int selRow = -1, selCol = -1;
         private List<Tuple<int, int>> validMoves = new List<Tuple<int, int>>();
@@ -47,6 +52,8 @@ namespace AlphaZero
         private static readonly Color CDark  = Color.FromArgb(181, 136,  99);
 
         public Form1() { InitializeComponent(); }
+
+        public void SetDifficulty(BotDifficulty d) { botDifficulty = d; }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -102,6 +109,18 @@ namespace AlphaZero
         {
             boardPanel.Invalidate();
             CheckEnd();
+            if (gameLogic.Result == GameResult.Ongoing && !gameLogic.IsWhiteTurn)
+                TriggerBotMove();
+        }
+
+        private async void TriggerBotMove()
+        {
+            if (botThinking) return;
+            botThinking = true;
+            var move = await Task.Run(() => gameLogic.GetBestMove(botDifficulty));
+            botThinking = false;
+            if (move != null && gameLogic.Result == GameResult.Ongoing && !gameLogic.IsWhiteTurn)
+                Move(move.Item1, move.Item2, move.Item3, move.Item4);
         }
 
         private void CheckEnd()
@@ -244,7 +263,7 @@ namespace AlphaZero
         // ── Input ─────────────────────────────────────────────────────────────
         private void OnClick(object sender, MouseEventArgs e)
         {
-            if (animating || gameLogic.Result != GameResult.Ongoing) return;
+            if (animating || botThinking || gameLogic.Result != GameResult.Ongoing || !gameLogic.IsWhiteTurn) return;
             int c = e.X / SqW;
             int r = e.Y / SqH;
             if (r < 0 || r > 7 || c < 0 || c > 7) return;
@@ -312,7 +331,9 @@ namespace AlphaZero
 
         private void NewGame()
         {
-            animTimer.Stop(); animating = false;
+            animTimer.Stop();
+            animating   = false;
+            botThinking = false;
             gameLogic.ResetGame();
             Deselect();
             boardPanel.Invalidate();

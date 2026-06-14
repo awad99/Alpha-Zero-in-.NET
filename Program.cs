@@ -16,7 +16,18 @@ namespace AlphaZero
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+
+            BotDifficulty chosen;
+            using (var dlg = new DifficultyForm())
+            {
+                if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                    return;
+                chosen = dlg.ChosenDifficulty;
+            }
+
+            var game = new Form1();
+            game.SetDifficulty(chosen);
+            Application.Run(game);
         }
     }
 }

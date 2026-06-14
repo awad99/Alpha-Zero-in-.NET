@@ -21,3 +21,4 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.pdb
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.exe.config
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.ChessPanel.resources
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Release\AlphaZero.DifficultyForm.resources
