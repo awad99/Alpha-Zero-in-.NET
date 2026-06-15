@@ -8,7 +8,6 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.csproj.CoreCo
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.exe
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.pdb
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.exe.config
-C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.Form1.resources
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bB.png
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bK.png
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\bN.png
@@ -21,3 +20,5 @@ C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wN.png
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wP.png
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wQ.png
 C:\Users\awad\source\repos\AlphaZero\AlphaZero\bin\Debug\Assets\wR.png
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.DifficultyForm.resources
+C:\Users\awad\source\repos\AlphaZero\AlphaZero\obj\Debug\AlphaZero.ChessPanel.resources
