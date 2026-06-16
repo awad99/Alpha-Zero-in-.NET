@@ -24,6 +24,93 @@ namespace AlphaZero
             }
         }
 
+        // ── Piece-Square Tables (indexed as [row][col]) ──────────────────────
+        private static readonly int[][] PawnTable = new int[][]
+        {
+            new int[] {  0,   0,   0,   0,   0,   0,   0,   0 }, // row 0 (white back)
+            new int[] { 50,  50,  50,  50,  50,  50,  50,  50 }, // row 1
+            new int[] { 10,  10,  20,  30,  30,  20,  10,  10 }, // row 2
+            new int[] {  5,   5,  10,  25,  25,  10,   5,   5 }, // row 3
+            new int[] {  0,   0,   0,  20,  20,   0,   0,   0 }, // row 4
+            new int[] {  5,  -5, -10,   0,   0, -10,  -5,   5 }, // row 5
+            new int[] {  5,  10,  10, -20, -20,  10,  10,   5 }, // row 6
+            new int[] {  0,   0,   0,   0,   0,   0,   0,   0 }  // row 7 (white promotion)
+        };
+
+        private static readonly int[][] KnightTable = new int[][]
+        {
+            new int[] { -50, -40, -30, -30, -30, -30, -40, -50 },
+            new int[] { -40, -20,   0,   0,   0,   0, -20, -40 },
+            new int[] { -30,   0,  10,  15,  15,  10,   0, -30 },
+            new int[] { -30,   5,  15,  20,  20,  15,   5, -30 },
+            new int[] { -30,   0,  15,  20,  20,  15,   0, -30 },
+            new int[] { -30,   5,  10,  15,  15,  10,   5, -30 },
+            new int[] { -40, -20,   0,   5,   5,   0, -20, -40 },
+            new int[] { -50, -40, -30, -30, -30, -30, -40, -50 }
+        };
+
+        private static readonly int[][] BishopTable = new int[][]
+        {
+            new int[] { -20, -10, -10, -10, -10, -10, -10, -20 },
+            new int[] { -10,   0,   0,   0,   0,   0,   0, -10 },
+            new int[] { -10,   0,   5,  10,  10,   5,   0, -10 },
+            new int[] { -10,   5,   5,  10,  10,   5,   5, -10 },
+            new int[] { -10,   0,  10,  10,  10,  10,   0, -10 },
+            new int[] { -10,  10,  10,  10,  10,  10,  10, -10 },
+            new int[] { -10,   5,   0,   0,   0,   0,   5, -10 },
+            new int[] { -20, -10, -10, -10, -10, -10, -10, -20 }
+        };
+
+        private static readonly int[][] RookTable = new int[][]
+        {
+            new int[] {  0,   0,   0,   0,   0,   0,   0,   0 },
+            new int[] {  5,  10,  10,  10,  10,  10,  10,   5 },
+            new int[] { -5,   0,   0,   0,   0,   0,   0,  -5 },
+            new int[] { -5,   0,   0,   0,   0,   0,   0,  -5 },
+            new int[] { -5,   0,   0,   0,   0,   0,   0,  -5 },
+            new int[] { -5,   0,   0,   0,   0,   0,   0,  -5 },
+            new int[] { -5,   0,   0,   0,   0,   0,   0,  -5 },
+            new int[] {  0,   0,   0,   5,   5,   0,   0,   0 }
+        };
+
+        private static readonly int[][] QueenTable = new int[][]
+        {
+            new int[] { -20, -10, -10,  -5,  -5, -10, -10, -20 },
+            new int[] { -10,   0,   0,   0,   0,   0,   0, -10 },
+            new int[] { -10,   0,   5,   5,   5,   5,   0, -10 },
+            new int[] {  -5,   0,   5,   5,   5,   5,   0,  -5 },
+            new int[] {   0,   0,   5,   5,   5,   5,   0,  -5 },
+            new int[] { -10,   5,   5,   5,   5,   5,   0, -10 },
+            new int[] { -10,   0,   5,   0,   0,   0,   0, -10 },
+            new int[] { -20, -10, -10,  -5,  -5, -10, -10, -20 }
+        };
+
+        private static readonly int[][] KingMidTable = new int[][]
+        {
+            new int[] { -30, -40, -40, -50, -50, -40, -40, -30 },
+            new int[] { -30, -40, -40, -50, -50, -40, -40, -30 },
+            new int[] { -30, -40, -40, -50, -50, -40, -40, -30 },
+            new int[] { -30, -40, -40, -50, -50, -40, -40, -30 },
+            new int[] { -20, -30, -30, -40, -40, -30, -30, -20 },
+            new int[] { -10, -20, -20, -20, -20, -20, -20, -10 },
+            new int[] {  20,  20,   0,   0,   0,   0,  20,  20 },
+            new int[] {  20,  30,  10,   0,   0,  10,  30,  20 }
+        };
+
+        private static int GetPST(int row, int col, char pieceType)
+        {
+            switch (pieceType)
+            {
+                case 'P': return PawnTable[row][col];
+                case 'N': return KnightTable[row][col];
+                case 'B': return BishopTable[row][col];
+                case 'R': return RookTable[row][col];
+                case 'Q': return QueenTable[row][col];
+                case 'K': return KingMidTable[row][col];
+                default:  return 0;
+            }
+        }
+
         // ── Snapshot of all state needed for search ───────────────────────────
         private struct SearchState
         {
@@ -64,7 +151,7 @@ namespace AlphaZero
             halfMoveClock           = s.halfClock;
         }
 
-        // ── Material evaluation (positive = good for white) ───────────────────
+        // ── Material + positional evaluation (positive = good for white) ──────
         private int Evaluate()
         {
             int score = 0;
@@ -74,7 +161,9 @@ namespace AlphaZero
                     string p = boardState[r, c];
                     if (p == null) continue;
                     int val = PieceVal(p[1]);
-                    score += p[0] == 'w' ? val : -val;
+                    int pst = GetPST(r, c, p[1]);
+                    int total = val + pst;
+                    score += p[0] == 'w' ? total : -total;
                 }
             return score;
         }
@@ -214,6 +303,75 @@ namespace AlphaZero
             return bestMove ?? moves[Rng.Next(moves.Count)];
         }
 
+        // ── Alpha-Beta pruning ────────────────────────────────────────────────
+        private int AlphaBeta(int depth, int alpha, int beta)
+        {
+            if (depth == 0) return Evaluate();
+
+            bool isWhite = IsWhiteTurn;
+            char color   = isWhite ? 'w' : 'b';
+            var  moves   = GetAllMoves(color);
+
+            if (moves.Count == 0)
+            {
+                if (IsKingInCheck(isWhite))
+                    return isWhite ? -99999 : 99999;
+                return 0; // stalemate
+            }
+
+            if (isWhite) // maximizing
+            {
+                int best = int.MinValue;
+                foreach (var mv in moves)
+                {
+                    var snap = SaveState();
+                    ApplyMoveForSearch(mv.Item1, mv.Item2, mv.Item3, mv.Item4);
+                    best = Math.Max(best, AlphaBeta(depth - 1, alpha, beta));
+                    RestoreState(snap);
+                    alpha = Math.Max(alpha, best);
+                    if (beta <= alpha) break;
+                }
+                return best;
+            }
+            else // minimizing
+            {
+                int best = int.MaxValue;
+                foreach (var mv in moves)
+                {
+                    var snap = SaveState();
+                    ApplyMoveForSearch(mv.Item1, mv.Item2, mv.Item3, mv.Item4);
+                    best = Math.Min(best, AlphaBeta(depth - 1, alpha, beta));
+                    RestoreState(snap);
+                    beta = Math.Min(beta, best);
+                    if (beta <= alpha) break;
+                }
+                return best;
+            }
+        }
+
+        // ── Pick best move using alpha-beta (bot plays as black → minimize) ───
+        private Tuple<int,int,int,int> GetBestMoveAlphaBeta(List<Tuple<int,int,int,int>> moves, int depth)
+        {
+            Tuple<int,int,int,int> bestMove  = null;
+            int                    bestScore = int.MaxValue;
+
+            foreach (var mv in moves)
+            {
+                var snap = SaveState();
+                ApplyMoveForSearch(mv.Item1, mv.Item2, mv.Item3, mv.Item4);
+                int score = AlphaBeta(depth - 1, int.MinValue, int.MaxValue);
+                RestoreState(snap);
+
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestMove  = mv;
+                }
+            }
+
+            return bestMove ?? moves[Rng.Next(moves.Count)];
+        }
+
         // ── Public entry point ────────────────────────────────────────────────
         public Tuple<int,int,int,int> GetBestMove(BotDifficulty difficulty)
         {
@@ -222,6 +380,9 @@ namespace AlphaZero
 
             if (difficulty == BotDifficulty.Easy)
                 return GetBestMoveMinMax(moves, depth: 3);
+
+            if (difficulty == BotDifficulty.Medium)
+                return GetBestMoveAlphaBeta(moves, depth: 5);
 
             return moves[Rng.Next(moves.Count)];
         }

@@ -28,8 +28,9 @@ namespace AlphaZero
         private ChessPanel boardPanel;
 
         // Bot
-        private BotDifficulty botDifficulty = BotDifficulty.Medium;
-        private bool          botThinking   = false;
+        private BotDifficulty botDifficulty  = BotDifficulty.Medium;
+        private bool          botThinking    = false;
+        private string[,]     displayBoard   = null; // snapshot during bot search to avoid race condition
 
         // Selection
         private int selRow = -1, selCol = -1;
@@ -117,7 +118,9 @@ namespace AlphaZero
         {
             if (botThinking) return;
             botThinking = true;
+            displayBoard = gameLogic.GetBoardCopy(); // freeze display while search mutates boardState
             var move = await Task.Run(() => gameLogic.GetBestMove(botDifficulty));
+            displayBoard = null;
             botThinking = false;
             if (move != null && gameLogic.Result == GameResult.Ongoing && !gameLogic.IsWhiteTurn)
                 Move(move.Item1, move.Item2, move.Item3, move.Item4);
@@ -235,12 +238,13 @@ namespace AlphaZero
             }
 
             // ── Pieces (skip animated piece destination) ──────────────────────
+            var board = displayBoard; // local ref — avoid race with TriggerBotMove clearing it
             for (int r = 0; r < 8; r++)
             {
                 for (int c = 0; c < 8; c++)
                 {
                     if (animating && r == aToR && c == aToC) continue;
-                    string p = gameLogic.GetPieceAt(r, c);
+                    string p = board != null ? board[r, c] : gameLogic.GetPieceAt(r, c);
                     if (p != null && pieceImages.ContainsKey(p))
                     {
                         int padw = sw / 11, padh = sh / 11;

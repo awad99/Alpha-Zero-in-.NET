@@ -86,6 +86,7 @@ namespace AlphaZero
         //  Public board access
         // ════════════════════════════════════════════════════════════════════
         public string GetPieceAt(int r, int c) => boardState[r, c];
+        public string[,] GetBoardCopy() => (string[,])boardState.Clone();
 
         // ════════════════════════════════════════════════════════════════════
         //  Move execution

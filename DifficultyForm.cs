@@ -22,8 +22,9 @@ namespace AlphaZero
 
         private void btnMedium_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Will be available soon!", "Coming Soon",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ChosenDifficulty = BotDifficulty.Medium;
+            DialogResult = DialogResult.OK;
+            Close();
         }
 
         private void btnHard_Click(object sender, EventArgs e)
